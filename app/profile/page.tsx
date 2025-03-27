@@ -12,7 +12,7 @@ import MobileFooter from "@/components/mobile-footer"
 // Mock user data
 const userData = {
   name: "Rajesh Kumar",
-  location: "Haryana, India",
+  location: "Gujarat, India",
   farmSize: "5 acres",
   crops: ["Wheat", "Rice", "Cotton"],
   joinedDate: "March 2023",

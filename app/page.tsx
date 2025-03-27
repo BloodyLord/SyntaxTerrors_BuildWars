@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { ArrowLeft, ArrowRight, Leaf } from "lucide-react"
+import { ArrowLeft, ArrowRight, Leaf, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import MobileFooter from "@/components/mobile-footer"
 import LanguageToggler from "@/components/language-toggler"
+import ChatBot from "@/components/ChatBot"
+import FloatingChat from "@/components/FloatingChat"
 
 // Mock data for schemes
 const schemes = [
@@ -16,21 +22,26 @@ const schemes = [
     id: 1,
     title: "Pradhan Mantri Fasal Bima Yojana",
     description: "Crop insurance scheme to provide financial support to farmers suffering crop loss/damage",
-    image: "/placeholder.svg?height=200&width=800",
+    image: "https://www.india.gov.in/sites/upload_files/npi/files/spotlights/fasal-bima-yojna-inner.jpg?height=200&width=800",
   },
   {
     id: 2,
     title: "PM Kisan Samman Nidhi",
     description: "Direct income support of ₹6000 per year to eligible farmer families",
-    image: "/placeholder.svg?height=200&width=800",
+    image: "https://yojnaias.com/wp-content/uploads/2023/04/PM-KISAN.png?height=200&width=800",
   },
   {
     id: 3,
     title: "Soil Health Card Scheme",
     description: "Provides information on soil health and recommendations on appropriate dosage of nutrients",
-    image: "/placeholder.svg?height=200&width=800",
+    image: "https://www.india.gov.in/sites/upload_files/npi/files/spotlights/soil-health-card-inner.jpg?height=200&width=800",
   },
 ]
+
+// Mock data for form selections
+const soilTypes = ["Black Soil", "Red Soil", "Alluvial Soil", "Sandy Soil", "Clay Soil"]
+const regions = ["North India", "South India", "East India", "West India", "Central India"]
+const seasons = ["Kharif", "Rabi", "Zaid"]
 
 // Mock data for crops (would be fetched from API in a real app)
 const mockCrops = [
@@ -41,7 +52,7 @@ const mockCrops = [
     previousPrice: "₹1,975 per quintal",
     change: "+2.0%",
     trend: "up",
-    image: "/placeholder.svg?height=200&width=200",
+    image: "https://www.peptechbio.com/wp-content/uploads/2023/03/Wheat_photo-cred-Adobe-stock_E-2.jpg?height=200&width=200",
   },
   {
     id: 2,
@@ -50,7 +61,7 @@ const mockCrops = [
     previousPrice: "₹1,940 per quintal",
     change: "-3.7%",
     trend: "down",
-    image: "/placeholder.svg?height=200&width=200",
+    image: "https://www.farmatma.in/wp-content/uploads/2018/01/paddy-cultivation.jpg?height=200&width=200",
   },
   {
     id: 3,
@@ -59,7 +70,7 @@ const mockCrops = [
     previousPrice: "₹6,025 per quintal",
     change: "+5.9%",
     trend: "up",
-    image: "/placeholder.svg?height=200&width=200",
+    image: "https://bsmedia.business-standard.com/_media/bs/img/article/2024-02/18/full/1708276902-8942.jpg?height=200&width=200",
   },
   {
     id: 4,
@@ -68,7 +79,7 @@ const mockCrops = [
     previousPrice: "₹285 per quintal",
     change: "0%",
     trend: "stable",
-    image: "/placeholder.svg?height=200&width=200",
+    image: "https://plantix.net/en/library/assets/custom/crop-images/sugarcane.jpeg?height=200&width=200",
   },
   {
     id: 5,
@@ -77,7 +88,7 @@ const mockCrops = [
     previousPrice: "₹1,850 per quintal",
     change: "+1.1%",
     trend: "up",
-    image: "/placeholder.svg?height=200&width=200",
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQI8mJaexq94edtBCwP3x2lLNwgsAG41uOXwA&s?height=200&width=200",
   },
   {
     id: 6,
@@ -86,7 +97,7 @@ const mockCrops = [
     previousPrice: "₹4,100 per quintal",
     change: "-3.7%",
     trend: "down",
-    image: "/placeholder.svg?height=200&width=200",
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSeysc-weyMDEUpSflZUyqQvpy_T9ARt5voJA&s?height=200&width=200",
   },
 ]
 
@@ -95,6 +106,13 @@ export default function FarmerDashboard() {
   const [crops, setCrops] = useState(mockCrops)
   const [cropSlideIndex, setCropSlideIndex] = useState(0)
   const [language, setLanguage] = useState("en") // Default language is English
+  const [isAddingCrop, setIsAddingCrop] = useState(false)
+  const [newCrop, setNewCrop] = useState({
+    name: "",
+    soilType: "",
+    region: "",
+    season: "",
+  })
   const router = useRouter()
 
   // Auto-rotate scheme banners
@@ -148,6 +166,16 @@ export default function FarmerDashboard() {
       addCrop: "Add Crop",
       viewDetails: "View Details",
       fromLastWeek: "from last week",
+      addNewCrop: "Add New Crop",
+      cropName: "Crop Name",
+      soilType: "Soil Type",
+      region: "Region",
+      season: "Season",
+      save: "Save",
+      cancel: "Cancel",
+      selectSoilType: "Select soil type",
+      selectRegion: "Select region",
+      selectSeason: "Select season",
     },
     hi: {
       appName: "किसानमित्र",
@@ -156,10 +184,43 @@ export default function FarmerDashboard() {
       addCrop: "फसल जोड़ें",
       viewDetails: "विवरण देखें",
       fromLastWeek: "पिछले सप्ताह से",
+      addNewCrop: "नई फसल जोड़ें",
+      cropName: "फसल का नाम",
+      soilType: "मिट्टी का प्रकार",
+      region: "क्षेत्र",
+      season: "मौसम",
+      save: "सहेजें",
+      cancel: "रद्द करें",
+      selectSoilType: "मिट्टी का प्रकार चुनें",
+      selectRegion: "क्षेत्र चुनें",
+      selectSeason: "मौसम चुनें",
     },
   }
 
   const t = translations[language as keyof typeof translations]
+
+  const handleAddCrop = () => {
+    if (!newCrop.name || !newCrop.soilType || !newCrop.region || !newCrop.season) {
+      return
+    }
+
+    const newCropEntry = {
+      id: crops.length + 1,
+      name: newCrop.name,
+      currentPrice: "₹0 per quintal",
+      previousPrice: "₹0 per quintal",
+      change: "0%",
+      trend: "stable",
+      image: "https://via.placeholder.com/200",
+      soilType: newCrop.soilType,
+      region: newCrop.region,
+      season: newCrop.season,
+    }
+
+    setCrops([...crops, newCropEntry])
+    setNewCrop({ name: "", soilType: "", region: "", season: "" })
+    setIsAddingCrop(false)
+  }
 
   // Calculate visible crops based on slide index
   const visibleCrops = crops.slice(cropSlideIndex * 3, cropSlideIndex * 3 + 3)
@@ -230,9 +291,80 @@ export default function FarmerDashboard() {
         <section>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-medium">{t.myCrops}</h2>
-            <Button variant="outline" size="sm" className="rounded-full text-sm h-8">
-              {t.addCrop}
-            </Button>
+            <Dialog open={isAddingCrop} onOpenChange={setIsAddingCrop}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-full text-sm h-8">
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t.addCrop}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t.addNewCrop}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">{t.cropName}</Label>
+                    <Input
+                      id="name"
+                      value={newCrop.name}
+                      onChange={(e) => setNewCrop({ ...newCrop, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="soilType">{t.soilType}</Label>
+                    <Select value={newCrop.soilType} onValueChange={(value) => setNewCrop({ ...newCrop, soilType: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t.selectSoilType} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {soilTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="region">{t.region}</Label>
+                    <Select value={newCrop.region} onValueChange={(value) => setNewCrop({ ...newCrop, region: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t.selectRegion} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {regions.map((region) => (
+                          <SelectItem key={region} value={region}>
+                            {region}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="season">{t.season}</Label>
+                    <Select value={newCrop.season} onValueChange={(value) => setNewCrop({ ...newCrop, season: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t.selectSeason} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {seasons.map((season) => (
+                          <SelectItem key={season} value={season}>
+                            {season}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setIsAddingCrop(false)}>
+                    {t.cancel}
+                  </Button>
+                  <Button onClick={handleAddCrop}>{t.save}</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="relative">
@@ -313,6 +445,9 @@ export default function FarmerDashboard() {
 
       {/* Mobile Footer */}
       <MobileFooter language={language} />
+
+      {/* Floating Chat */}
+      <FloatingChat />
     </div>
   )
 }
