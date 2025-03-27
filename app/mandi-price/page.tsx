@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Search, MapPin, ChevronDown, Info } from "lucide-react"
+import { ArrowLeft, Search, MapPin, ChevronDown, Info, ArrowRight, Leaf } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { NextPage } from "next"
 import Image from "next/image"
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import LanguageToggler from "@/components/language-toggler"
 
 // Types for API response
 interface MandiRecord {
@@ -94,19 +95,77 @@ const govSchemes = [
   }
 ]
 
+// Mock data for news
+const news = [
+  {
+    id: 1,
+    title: "Wheat Prices Surge Amidst Supply Concerns",
+    description: "Recent weather conditions in major wheat-producing regions have led to concerns about supply, causing prices to rise significantly.",
+    image: "https://bsmedia.business-standard.com/_media/bs/img/article/2024-02/18/full/1708276902-8942.jpg",
+    date: "2024-03-27",
+    source: "Agricultural Times"
+  },
+  {
+    id: 2,
+    title: "New Digital Platform Launched for Direct Farmer-Mandi Connect",
+    description: "Government introduces a new digital platform to connect farmers directly with mandis, reducing middlemen and improving price discovery.",
+    image: "https://www.farmatma.in/wp-content/uploads/2018/01/paddy-cultivation.jpg",
+    date: "2024-03-26",
+    source: "Farm News"
+  },
+  {
+    id: 3,
+    title: "Rice Export Policy Changes Impact Domestic Prices",
+    description: "Recent changes in rice export policies have led to adjustments in domestic market prices, affecting both farmers and consumers.",
+    image: "https://www.peptechbio.com/wp-content/uploads/2023/03/Wheat_photo-cred-Adobe-stock_E-2.jpg",
+    date: "2024-03-25",
+    source: "Agri Business"
+  }
+]
+
 const MandiPricePage: NextPage = () => {
   const [language, setLanguage] = useState("en")
   const [searchTerm, setSearchTerm] = useState("")
   const [mandiData, setMandiData] = useState<MandiRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedState, setSelectedState] = useState<string>("Haryana")
+  const [currentNewsIndex, setCurrentNewsIndex] = useState(0)
+  const [selectedState, setSelectedState] = useState<string>("all")
   const [activeTab, setActiveTab] = useState<string>("")
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  // Add mounted state to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const toggleLanguage = () => {
+    setLanguage(language === "en" ? "hi" : "en")
+  }
 
   // Get unique states and commodities from mandi data
   const uniqueStates = Array.from(new Set(mandiData.map(item => item.State))).sort()
   const uniqueCommodities = Array.from(new Set(mandiData.map(item => item.Commodity))).sort()
+
+  // Auto-rotate news
+  useEffect(() => {
+    if (!mounted) return
+
+    const interval = setInterval(() => {
+      setCurrentNewsIndex((prevIndex) => (prevIndex + 1) % news.length)
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [mounted])
+
+  const handlePrevNews = () => {
+    setCurrentNewsIndex((prevIndex) => (prevIndex - 1 + news.length) % news.length)
+  }
+
+  const handleNextNews = () => {
+    setCurrentNewsIndex((prevIndex) => (prevIndex + 1) % news.length)
+  }
 
   useEffect(() => {
     const fetchMandiPrices = async () => {
@@ -164,6 +223,8 @@ const MandiPricePage: NextPage = () => {
       govSchemes: "Government Schemes",
       viewScheme: "View Scheme",
       knowMore: "Know More",
+      news: "News",
+      appName: "Mandi Prices",
     },
     hi: {
       title: "मंडी मूल्य",
@@ -190,6 +251,8 @@ const MandiPricePage: NextPage = () => {
       govSchemes: "सरकारी योजनाएं",
       viewScheme: "योजना देखें",
       knowMore: "और जानें",
+      news: "समाचार",
+      appName: "मंडी मूल्य",
     },
   }
 
@@ -227,54 +290,71 @@ const MandiPricePage: NextPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
-      {/* Header */}
+      {/* App Header */}
       <header className="bg-[#2e7d32] text-white p-4 shadow-md">
-        <div className="container mx-auto flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="mr-2 text-white hover:bg-white/20 h-8 w-8 rounded-full"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-semibold">{t.title}</h1>
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex items-center">
+            <Leaf className="h-6 w-6 mr-2" />
+            <h1 className="text-xl font-semibold">{t.appName}</h1>
+          </div>
+          <LanguageToggler language={language} toggleLanguage={toggleLanguage} />
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 flex-1 mb-16">
-        {/* Government Schemes Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <Info className="h-5 w-5 mr-2 text-[#2e7d32]" />
-            {t.govSchemes}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {govSchemes.map((scheme) => (
-              <Card key={scheme.title} className="border-0 shadow-sm overflow-hidden">
-                <div className="relative h-40 w-full">
-                  <Image
-                    src={scheme.image}
-                    alt={scheme.title}
-                    fill
-                    className="object-cover"
-                  />
+        {/* News Section */}
+        {mounted && (
+          <section className="mb-8 relative">
+            <h2 className="text-lg font-medium mb-3">{t.news}</h2>
+            <div className="relative overflow-hidden rounded-xl shadow-sm">
+              <div className="relative h-[180px] w-full">
+                <Image
+                  src={news[currentNewsIndex].image}
+                  alt={news[currentNewsIndex].title}
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-4 text-white">
+                  <div className="flex items-center gap-2 text-xs mb-1">
+                    <span>{news[currentNewsIndex].source}</span>
+                    <span>•</span>
+                    <span>{formatDate(news[currentNewsIndex].date)}</span>
+                  </div>
+                  <h3 className="text-lg font-medium">{news[currentNewsIndex].title}</h3>
+                  <p className="mt-1 text-sm">{news[currentNewsIndex].description}</p>
                 </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold mb-2">{scheme.title}</h3>
-                  <p className="text-sm text-gray-600 mb-4">{scheme.description}</p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.open(scheme.link, '_blank')}
-                  >
-                    {t.knowMore}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white h-8 w-8 rounded-full"
+                onClick={handlePrevNews}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Previous news</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white h-8 w-8 rounded-full"
+                onClick={handleNextNews}
+              >
+                <ArrowRight className="h-4 w-4" />
+                <span className="sr-only">Next news</span>
+              </Button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {news.map((_, index) => (
+                  <span
+                    key={index}
+                    className={`block h-1.5 w-1.5 rounded-full ${
+                      index === currentNewsIndex ? "bg-white" : "bg-white/50"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Search and Filter */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -335,7 +415,7 @@ const MandiPricePage: NextPage = () => {
                         <h2 className="text-xl font-semibold mb-4">{t.about}</h2>
                         <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
                           <Image
-                            src={cropDetails[commodity]?.image || "/crops/default.jpg"}
+                            src={cropDetails[commodity]?.image || "https://agrigro.com/cdn/shop/articles/elements-of-crop-production_featimg_750x.jpg?v=1704299285"}
                             alt={commodity}
                             fill
                             className="object-cover"

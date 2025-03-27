@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import MobileFooter from "@/components/mobile-footer"
 import LanguageToggler from "@/components/language-toggler"
-import ChatBot from "@/components/ChatBot"
 import FloatingChat from "@/components/FloatingChat"
 
 // Mock data for schemes
