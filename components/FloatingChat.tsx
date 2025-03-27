@@ -45,11 +45,11 @@ export default function FloatingChat() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-8 right-4 z-50">
       {!isOpen ? (
         <Button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-full shadow-lg"
+          className="w-14 h-14 rounded-full shadow-lg bg-[#2e7d32] hover:bg-[#1b5e20]"
           size="icon"
         >
           💬
@@ -78,7 +78,7 @@ export default function FloatingChat() {
                 <div
                   className={`inline-block p-3 rounded-lg ${
                     message.role === 'user'
-                      ? 'bg-blue-500 text-white'
+                      ? 'bg-[#2e7d32] text-white'
                       : 'bg-gray-100'
                   }`}
                 >

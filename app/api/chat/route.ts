@@ -1,32 +1,41 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
-import { NextResponse } from "next/server"
+import { NextResponse } from 'next/server'
 
-const genAI = new GoogleGenerativeAI("AIzaSyDInX-I16yN-4HwyJw48f13VTnppuY37Qk")
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-2.0-flash-thinking-exp-01-21",
-  generationConfig: {
-    temperature: 1,
-    topP: 0.95,
-    topK: 40,
-    maxOutputTokens: 8192,
-    responseModalities: [],
-    responseMimeType: "text/plain",
-  },
-})
+const responses = {
+  greeting: "Hello! I'm your agricultural assistant. How can I help you?",
+  weather: "I can help you with weather information. Please provide your location.",
+  crop: "I can help you with crop information. Please specify the crop name.",
+  price: "I can help you with crop prices. Please specify the crop name.",
+  scheme: "I can help you with information about government schemes.",
+  default: "I'm sorry, I didn't understand your question. Please ask again."
+}
 
 export async function POST(req: Request) {
   try {
     const { message } = await req.json()
+    
+    // Convert message to lowercase for easier matching
+    const lowerMessage = message.toLowerCase()
+    
+    // Simple response logic based on keywords
+    let response = responses.default
+    
+    if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+      response = responses.greeting
+    } else if (lowerMessage.includes('weather') || lowerMessage.includes('temperature') || lowerMessage.includes('rain')) {
+      response = responses.weather
+    } else if (lowerMessage.includes('crop') || lowerMessage.includes('plant')) {
+      response = responses.crop
+    } else if (lowerMessage.includes('price') || lowerMessage.includes('cost')) {
+      response = responses.price
+    } else if (lowerMessage.includes('scheme') || lowerMessage.includes('government')) {
+      response = responses.scheme
+    }
 
-    const result = await model.generateContent(message)
-    const response = await result.response
-    const text = response.text()
-
-    return NextResponse.json({ response: text })
+    return NextResponse.json({ response })
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Chat API Error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate response' },
+      { response: "Sorry, something went wrong. Please try again." },
       { status: 500 }
     )
   }

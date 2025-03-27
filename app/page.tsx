@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { ArrowLeft, ArrowRight, Leaf, Plus } from "lucide-react"
+import { ArrowLeft, ArrowRight, Leaf, Plus, Info, Calendar, TrendingUp, Wheat, Apple, Carrot } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import MobileFooter from "@/components/mobile-footer"
 import LanguageToggler from "@/components/language-toggler"
 import FloatingChat from "@/components/FloatingChat"
+import AuthModal from "@/components/AuthModal"
 
 // Mock data for schemes
 const schemes = [
@@ -104,8 +105,9 @@ export default function FarmerDashboard() {
   const [currentSchemeIndex, setCurrentSchemeIndex] = useState(0)
   const [crops, setCrops] = useState(mockCrops)
   const [cropSlideIndex, setCropSlideIndex] = useState(0)
-  const [language, setLanguage] = useState("en") // Default language is English
+  const [language, setLanguage] = useState("en")
   const [isAddingCrop, setIsAddingCrop] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [newCrop, setNewCrop] = useState({
     name: "",
     soilType: "",
@@ -113,6 +115,14 @@ export default function FarmerDashboard() {
     season: "",
   })
   const router = useRouter()
+
+  // Check authentication state on component mount
+  useEffect(() => {
+    const authState = sessionStorage.getItem("isAuthenticated")
+    if (authState === "true") {
+      setIsAuthenticated(true)
+    }
+  }, [])
 
   // Auto-rotate scheme banners
   useEffect(() => {
@@ -225,6 +235,14 @@ export default function FarmerDashboard() {
   const visibleCrops = crops.slice(cropSlideIndex * 3, cropSlideIndex * 3 + 3)
   const totalSlides = Math.ceil(crops.length / 3)
 
+  const handleAuth = () => {
+    setIsAuthenticated(true)
+  }
+
+  if (!isAuthenticated) {
+    return <AuthModal onAuth={handleAuth} language={language} />
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
       {/* App Header */}
@@ -233,6 +251,9 @@ export default function FarmerDashboard() {
           <div className="flex items-center">
             <Leaf className="h-6 w-6 mr-2" />
             <h1 className="text-xl font-semibold">{t.appName}</h1>
+            <span className="ml-4 text-sm opacity-90">
+              {language === "hi" ? "स्वागत है" : "Welcome"}, {sessionStorage.getItem("userPhone")}
+            </span>
           </div>
           <LanguageToggler language={language} toggleLanguage={toggleLanguage} />
         </div>

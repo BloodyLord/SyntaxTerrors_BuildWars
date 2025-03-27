@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Mic, Send, X, Loader2 } from "lucide-react"
+import { Mic, Send, X, Loader2, GripVertical } from "lucide-react"
+import Draggable from "react-draggable"
 
 interface Message {
   role: "user" | "assistant"
@@ -22,8 +23,10 @@ const ChatBot = ({ language }: ChatBotProps) => {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isListening, setIsListening] = useState(false)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const [interimTranscript, setInterimTranscript] = useState("")
 
   // Initialize speech recognition
   useEffect(() => {
@@ -31,14 +34,27 @@ const ChatBot = ({ language }: ChatBotProps) => {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition()
-        recognitionRef.current.continuous = false
-        recognitionRef.current.interimResults = false
+        recognitionRef.current.continuous = true
+        recognitionRef.current.interimResults = true
         recognitionRef.current.lang = language === "hi" ? "hi-IN" : "en-US"
 
         recognitionRef.current.onresult = (event) => {
-          const transcript = event.results[0][0].transcript
-          setInput(transcript)
-          setIsListening(false)
+          let finalTranscript = ""
+          let interimTranscript = ""
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript
+            } else {
+              interimTranscript += transcript
+            }
+          }
+
+          if (finalTranscript) {
+            setInput(finalTranscript)
+          }
+          setInterimTranscript(interimTranscript)
         }
 
         recognitionRef.current.onerror = (event) => {
@@ -73,6 +89,7 @@ const ChatBot = ({ language }: ChatBotProps) => {
 
     const userMessage = input.trim()
     setInput("")
+    setInterimTranscript("")
     setMessages((prev) => [...prev, { role: "user", content: userMessage }])
     setIsLoading(true)
 
@@ -117,6 +134,91 @@ const ChatBot = ({ language }: ChatBotProps) => {
     }
   }, [messages])
 
+  const ChatContent = () => (
+    <Card className="w-[350px] h-[500px] flex flex-col shadow-xl">
+      <div className="p-4 border-b flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <GripVertical className="h-4 w-4 text-gray-400 cursor-move" />
+          <h3 className="font-semibold">
+            {language === "hi" ? "कृषि सहायक" : "Agri Assistant"}
+          </h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsOpen(false)}
+          className="h-8 w-8"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+        <div className="space-y-4">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`max-w-[80%] rounded-lg p-3 ${
+                  message.role === "user"
+                    ? "bg-[#2e7d32] text-white"
+                    : "bg-gray-100"
+                }`}
+              >
+                {message.content}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-100 rounded-lg p-3">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      <form onSubmit={handleSubmit} className="p-4 border-t">
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                language === "hi"
+                  ? "अपना प्रश्न लिखें..."
+                  : "Type your question..."
+              }
+              className="pr-20"
+            />
+            {interimTranscript && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 italic">
+                {interimTranscript}
+              </div>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={toggleListening}
+            className={`h-10 w-10 ${isListening ? "bg-red-100" : ""}`}
+          >
+            <Mic className={`h-4 w-4 ${isListening ? "text-red-500" : ""}`} />
+          </Button>
+          <Button type="submit" size="icon" className="h-10 w-10">
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </form>
+    </Card>
+  )
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {!isOpen ? (
@@ -140,78 +242,16 @@ const ChatBot = ({ language }: ChatBotProps) => {
           </svg>
         </Button>
       ) : (
-        <Card className="w-[350px] h-[500px] flex flex-col shadow-xl">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h3 className="font-semibold">
-              {language === "hi" ? "कृषि सहायक" : "Agri Assistant"}
-            </h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(false)}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+        <Draggable
+          handle=".drag-handle"
+          position={position}
+          onDrag={(e, data) => setPosition({ x: data.x, y: data.y })}
+          bounds="body"
+        >
+          <div className="drag-handle">
+            <ChatContent />
           </div>
-
-          <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-            <div className="space-y-4">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      message.role === "user"
-                        ? "bg-[#2e7d32] text-white"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    {message.content}
-                  </div>
-                </div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg p-3">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          <form onSubmit={handleSubmit} className="p-4 border-t">
-            <div className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={
-                  language === "hi"
-                    ? "अपना प्रश्न लिखें..."
-                    : "Type your question..."
-                }
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={toggleListening}
-                className={`h-10 w-10 ${isListening ? "bg-red-100" : ""}`}
-              >
-                <Mic className={`h-4 w-4 ${isListening ? "text-red-500" : ""}`} />
-              </Button>
-              <Button type="submit" size="icon" className="h-10 w-10">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
-        </Card>
+        </Draggable>
       )}
     </div>
   )
